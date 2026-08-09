@@ -1,0 +1,46 @@
+# Multi-stage build for optimized image size
+FROM golang:1.24-alpine AS builder
+
+# Install build dependencies
+RUN apk add --no-cache git make
+
+# Set working directory
+WORKDIR /app
+
+# Copy go mod files
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build the worker binary
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+    -ldflags="-w -s" \
+    -o /app/bin/worker \
+    ./cmd/worker
+
+# Final stage - minimal image
+FROM alpine:latest
+
+# Install ca-certificates for HTTPS
+RUN apk --no-cache add ca-certificates
+
+# Create non-root user
+RUN addgroup -g 1000 worker && \
+    adduser -D -u 1000 -G worker worker
+
+WORKDIR /app
+
+# Copy binary from builder
+COPY --from=builder /app/bin/worker /app/worker
+
+# Change ownership
+RUN chown -R worker:worker /app
+
+# Switch to non-root user
+USER worker
+
+# Run the worker
+ENTRYPOINT ["/app/worker"]
+

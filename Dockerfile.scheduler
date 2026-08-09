@@ -1,0 +1,53 @@
+# Multi-stage build for optimized image size
+FROM golang:1.24-alpine AS builder
+
+# Install build dependencies
+RUN apk add --no-cache git make
+
+# Set working directory
+WORKDIR /app
+
+# Copy go mod files
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build the scheduler binary
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+    -ldflags="-w -s" \
+    -o /app/bin/scheduler \
+    ./cmd/scheduler
+
+# Final stage - minimal image
+FROM alpine:latest
+
+# Install ca-certificates for HTTPS
+RUN apk --no-cache add ca-certificates
+
+# Create non-root user
+RUN addgroup -g 1000 scheduler && \
+    adduser -D -u 1000 -G scheduler scheduler
+
+WORKDIR /app
+
+# Copy binary from builder
+COPY --from=builder /app/bin/scheduler /app/scheduler
+
+# Change ownership
+RUN chown -R scheduler:scheduler /app
+
+# Switch to non-root user
+USER scheduler
+
+# Expose ports
+EXPOSE 8001 9001
+
+# Health check
+HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:9001/health || exit 1
+
+# Run the scheduler
+ENTRYPOINT ["/app/scheduler"]
+

@@ -1,0 +1,100 @@
+syntax = "proto3";
+
+package scheduler;
+
+option go_package = "github.com/chandan0804/distributed-task-scheduler/proto";
+
+// Task represents a unit of work to be executed
+message Task {
+  string id = 1;
+  string name = 2;
+  bytes payload = 3;
+  int64 created_at = 4;
+  int64 scheduled_at = 5;
+  TaskStatus status = 6;
+  int32 retry_count = 7;
+  int32 max_retries = 8;
+  string assigned_worker = 9;
+}
+
+enum TaskStatus {
+  PENDING = 0;
+  RUNNING = 1;
+  COMPLETED = 2;
+  FAILED = 3;
+  CANCELLED = 4;
+}
+
+// TaskRequest is sent by workers to request tasks
+message TaskRequest {
+  string worker_id = 1;
+  int32 capacity = 2;
+}
+
+// TaskResponse contains tasks assigned to a worker
+message TaskResponse {
+  repeated Task tasks = 1;
+  bool has_more = 2;
+}
+
+// TaskResult is sent by workers after task execution
+message TaskResult {
+  string task_id = 1;
+  string worker_id = 2;
+  TaskStatus status = 3;
+  string error_message = 4;
+  int64 completed_at = 5;
+  bytes result = 6;
+}
+
+// TaskAck acknowledges task result receipt
+message TaskAck {
+  string task_id = 1;
+  bool success = 2;
+}
+
+// SubmitTaskRequest is used to submit new tasks
+message SubmitTaskRequest {
+  string name = 1;
+  bytes payload = 2;
+  int64 scheduled_at = 3;
+  int32 max_retries = 4;
+}
+
+// SubmitTaskResponse returns the created task ID
+message SubmitTaskResponse {
+  string task_id = 1;
+  bool success = 2;
+  string message = 3;
+}
+
+// HealthCheckRequest for cluster health
+message HealthCheckRequest {
+  string node_id = 1;
+}
+
+// HealthCheckResponse returns cluster status
+message HealthCheckResponse {
+  bool is_leader = 1;
+  string leader_id = 2;
+  int32 cluster_size = 3;
+  int64 tasks_pending = 4;
+  int64 tasks_running = 5;
+  int64 tasks_completed = 6;
+}
+
+// TaskScheduler service definition
+service TaskScheduler {
+  // Bidirectional streaming for task distribution
+  rpc StreamTasks(stream TaskRequest) returns (stream TaskResponse);
+  
+  // Bidirectional streaming for task results
+  rpc StreamResults(stream TaskResult) returns (stream TaskAck);
+  
+  // Submit a new task
+  rpc SubmitTask(SubmitTaskRequest) returns (SubmitTaskResponse);
+  
+  // Health check
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
+

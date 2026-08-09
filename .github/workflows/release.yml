@@ -1,0 +1,71 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: Install protoc
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
+
+      - name: Install Go protoc plugins
+        run: |
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.34.1
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
+
+      - name: Generate protobuf code
+        run: |
+          protoc --go_out=. --go_opt=paths=source_relative \
+                 --go-grpc_out=. --go-grpc_opt=paths=source_relative \
+                 proto/scheduler.proto
+
+      - name: Build binaries for multiple platforms
+        run: |
+          mkdir -p dist
+
+          # Linux AMD64
+          GOOS=linux GOARCH=amd64 go build -mod=mod -o dist/scheduler-linux-amd64 cmd/scheduler/main.go
+          GOOS=linux GOARCH=amd64 go build -mod=mod -o dist/worker-linux-amd64 cmd/worker/main.go
+          GOOS=linux GOARCH=amd64 go build -mod=mod -o dist/client-linux-amd64 cmd/client/main.go
+
+          # Linux ARM64
+          GOOS=linux GOARCH=arm64 go build -mod=mod -o dist/scheduler-linux-arm64 cmd/scheduler/main.go
+          GOOS=linux GOARCH=arm64 go build -mod=mod -o dist/worker-linux-arm64 cmd/worker/main.go
+          GOOS=linux GOARCH=arm64 go build -mod=mod -o dist/client-linux-arm64 cmd/client/main.go
+
+          # macOS AMD64
+          GOOS=darwin GOARCH=amd64 go build -mod=mod -o dist/scheduler-darwin-amd64 cmd/scheduler/main.go
+          GOOS=darwin GOARCH=amd64 go build -mod=mod -o dist/worker-darwin-amd64 cmd/worker/main.go
+          GOOS=darwin GOARCH=amd64 go build -mod=mod -o dist/client-darwin-amd64 cmd/client/main.go
+
+          # macOS ARM64 (Apple Silicon)
+          GOOS=darwin GOARCH=arm64 go build -mod=mod -o dist/scheduler-darwin-arm64 cmd/scheduler/main.go
+          GOOS=darwin GOARCH=arm64 go build -mod=mod -o dist/worker-darwin-arm64 cmd/worker/main.go
+          GOOS=darwin GOARCH=arm64 go build -mod=mod -o dist/client-darwin-arm64 cmd/client/main.go
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/*
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

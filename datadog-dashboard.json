@@ -1,0 +1,169 @@
+{
+  "title": "Distributed Task Scheduler - Performance Dashboard",
+  "description": "Real-time monitoring of distributed task scheduler with Raft consensus",
+  "widgets": [
+    {
+      "definition": {
+        "title": "Task Throughput (tasks/sec)",
+        "title_size": "16",
+        "title_align": "left",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "sum:task_scheduler.task.submitted{*}.as_rate()",
+            "display_type": "line",
+            "style": {
+              "palette": "dog_classic",
+              "line_type": "solid",
+              "line_width": "normal"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "title": "Task Status Distribution",
+        "title_size": "16",
+        "title_align": "left",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "sum:task_scheduler.queue.pending{*}",
+            "display_type": "line",
+            "style": {
+              "palette": "warm"
+            }
+          },
+          {
+            "q": "sum:task_scheduler.queue.running{*}",
+            "display_type": "line",
+            "style": {
+              "palette": "cool"
+            }
+          },
+          {
+            "q": "sum:task_scheduler.queue.completed{*}",
+            "display_type": "line",
+            "style": {
+              "palette": "green"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "title": "Task Latency (p50, p95, p99)",
+        "title_size": "16",
+        "title_align": "left",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "p50:task_scheduler.latency.task{*}",
+            "display_type": "line"
+          },
+          {
+            "q": "p95:task_scheduler.latency.task{*}",
+            "display_type": "line"
+          },
+          {
+            "q": "p99:task_scheduler.latency.task{*}",
+            "display_type": "line"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "title": "Worker Count",
+        "title_size": "16",
+        "title_align": "left",
+        "type": "query_value",
+        "requests": [
+          {
+            "q": "sum:task_scheduler.worker.count{*}",
+            "aggregator": "last"
+          }
+        ],
+        "autoscale": true,
+        "precision": 0
+      }
+    },
+    {
+      "definition": {
+        "title": "Task Success vs Failure Rate",
+        "title_size": "16",
+        "title_align": "left",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "sum:task_scheduler.task.completed{*}.as_rate()",
+            "display_type": "bars",
+            "style": {
+              "palette": "green"
+            }
+          },
+          {
+            "q": "sum:task_scheduler.task.failed{*}.as_rate()",
+            "display_type": "bars",
+            "style": {
+              "palette": "red"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "title": "Raft Leader Elections",
+        "title_size": "16",
+        "title_align": "left",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "sum:task_scheduler.raft.leader_election{*}.as_count()",
+            "display_type": "bars",
+            "style": {
+              "palette": "purple"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "title": "Cluster Health Status",
+        "title_size": "16",
+        "title_align": "left",
+        "type": "check_status",
+        "check": "task_scheduler.health.status",
+        "grouping": "cluster",
+        "group_by": ["node"],
+        "tags": ["*"]
+      }
+    },
+    {
+      "definition": {
+        "title": "Queue Size Over Time",
+        "title_size": "16",
+        "title_align": "left",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "sum:task_scheduler.queue.size{*}",
+            "display_type": "area",
+            "style": {
+              "palette": "dog_classic"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "template_variables": [],
+  "layout_type": "ordered",
+  "is_read_only": false,
+  "notify_list": []
+}
+

@@ -1,0 +1,232 @@
+version: "3.8"
+
+services:
+  # Datadog Agent for monitoring
+  datadog:
+    image: gcr.io/datadoghq/agent:7
+    container_name: datadog-agent
+    environment:
+      - DD_API_KEY=d3350a744ac405baf014bc21894c726e
+      - DD_SITE=us5.datadoghq.com
+      - DD_DOGSTATSD_NON_LOCAL_TRAFFIC=true
+      - DD_LOGS_ENABLED=true
+      - DD_LOGS_CONFIG_CONTAINER_COLLECT_ALL=true
+      - DD_CONTAINER_EXCLUDE="name:datadog-agent"
+      - DD_APM_ENABLED=true
+      - DD_APM_NON_LOCAL_TRAFFIC=true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /proc/:/host/proc/:ro
+      - /sys/fs/cgroup/:/host/sys/fs/cgroup:ro
+    networks:
+      - scheduler-network
+    ports:
+      - "8126:8126/tcp" # APM
+      - "8125:8125/udp" # DogStatsD
+
+  # etcd for distributed locking and storage
+  etcd:
+    image: gcr.io/etcd-development/etcd:v3.5.11
+    container_name: etcd
+    command:
+      - /usr/local/bin/etcd
+      - --advertise-client-urls=http://0.0.0.0:2379
+      - --listen-client-urls=http://0.0.0.0:2379
+    ports:
+      - "2379:2379"
+      - "2380:2380"
+    networks:
+      - scheduler-network
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Scheduler Node 1 (Bootstrap/Leader)
+  scheduler-1:
+    build: .
+    container_name: scheduler-1
+    command: >
+      ./scheduler
+      -node-id=node1
+      -raft-addr=scheduler-1:7001
+      -grpc-addr=0.0.0.0:8001
+      -http-addr=0.0.0.0:9001
+      -bootstrap=true
+      -etcd=etcd:2379
+    ports:
+      - "8001:8001"
+      - "9001:9001"
+    networks:
+      - scheduler-network
+    depends_on:
+      etcd:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Scheduler Node 2
+  scheduler-2:
+    build: .
+    container_name: scheduler-2
+    command: >
+      ./scheduler
+      -node-id=node2
+      -raft-addr=scheduler-2:7002
+      -grpc-addr=0.0.0.0:8002
+      -http-addr=0.0.0.0:9002
+      -bootstrap=false
+      -join=scheduler-1:7001
+      -etcd=etcd:2379
+    ports:
+      - "8002:8002"
+      - "9002:9002"
+    networks:
+      - scheduler-network
+    depends_on:
+      scheduler-1:
+        condition: service_healthy
+
+  # Scheduler Node 3
+  scheduler-3:
+    build: .
+    container_name: scheduler-3
+    command: >
+      ./scheduler
+      -node-id=node3
+      -raft-addr=scheduler-3:7003
+      -grpc-addr=0.0.0.0:8003
+      -http-addr=0.0.0.0:9003
+      -bootstrap=false
+      -join=scheduler-1:7001
+      -etcd=etcd:2379
+    ports:
+      - "8003:8003"
+      - "9003:9003"
+    networks:
+      - scheduler-network
+    depends_on:
+      scheduler-1:
+        condition: service_healthy
+
+  # Scheduler Node 4
+  scheduler-4:
+    build: .
+    container_name: scheduler-4
+    command: >
+      ./scheduler
+      -node-id=node4
+      -raft-addr=scheduler-4:7004
+      -grpc-addr=0.0.0.0:8004
+      -http-addr=0.0.0.0:9004
+      -bootstrap=false
+      -join=scheduler-1:7001
+      -etcd=etcd:2379
+    ports:
+      - "8004:8004"
+      - "9004:9004"
+    networks:
+      - scheduler-network
+    depends_on:
+      scheduler-1:
+        condition: service_healthy
+
+  # Scheduler Node 5
+  scheduler-5:
+    build: .
+    container_name: scheduler-5
+    command: >
+      ./scheduler
+      -node-id=node5
+      -raft-addr=scheduler-5:7005
+      -grpc-addr=0.0.0.0:8005
+      -http-addr=0.0.0.0:9005
+      -bootstrap=false
+      -join=scheduler-1:7001
+      -etcd=etcd:2379
+    ports:
+      - "8005:8005"
+      - "9005:9005"
+    networks:
+      - scheduler-network
+    depends_on:
+      scheduler-1:
+        condition: service_healthy
+
+  # Worker 1
+  worker-1:
+    build: .
+    container_name: worker-1
+    command: >
+      ./worker
+      -scheduler=scheduler-1:8001
+      -worker-id=worker-1
+      -capacity=10
+    networks:
+      - scheduler-network
+    depends_on:
+      - scheduler-1
+
+  # Worker 2
+  worker-2:
+    build: .
+    container_name: worker-2
+    command: >
+      ./worker
+      -scheduler=scheduler-1:8001
+      -worker-id=worker-2
+      -capacity=10
+    networks:
+      - scheduler-network
+    depends_on:
+      - scheduler-1
+
+  # Worker 3
+  worker-3:
+    build: .
+    container_name: worker-3
+    command: >
+      ./worker
+      -scheduler=scheduler-1:8001
+      -worker-id=worker-3
+      -capacity=10
+    networks:
+      - scheduler-network
+    depends_on:
+      - scheduler-1
+
+  # Worker 4
+  worker-4:
+    build: .
+    container_name: worker-4
+    command: >
+      ./worker
+      -scheduler=scheduler-1:8001
+      -worker-id=worker-4
+      -capacity=10
+    networks:
+      - scheduler-network
+    depends_on:
+      - scheduler-1
+
+  # Worker 5
+  worker-5:
+    build: .
+    container_name: worker-5
+    command: >
+      ./worker
+      -scheduler=scheduler-1:8001
+      -worker-id=worker-5
+      -capacity=10
+    networks:
+      - scheduler-network
+    depends_on:
+      - scheduler-1
+
+networks:
+  scheduler-network:
+    driver: bridge
