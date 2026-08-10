@@ -1,8 +1,8 @@
 # Distributed Task Scheduler
 
-[![CI/CD Pipeline](https://github.com/chandan0804/distributed-task-scheduler/actions/workflows/ci.yml/badge.svg)](https://github.com/ansharma07/distributed-task-scheduler/actions/workflows/ci.yml)
-[![CodeQL](https://github.com/ansharma07/distributed-task-scheduler/actions/workflows/codeql.yml/badge.svg)](https://github.com/chandan0804/distributed-task-scheduler/actions/workflows/codeql.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/ansharma07/distributed-task-scheduler)](https://goreportcard.com/report/github.com/ansharma07/distributed-task-scheduler)
+[![CI/CD Pipeline](https://github.com/chandan0804/distributed-task-scheduler/actions/workflows/ci.yml/badge.svg)](https://github.com/chandan0804//distributed-task-scheduler/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/chandan0804/distributed-task-scheduler/actions/workflows/codeql.yml/badge.svg)](https://github.com/chandan0804/distributed-task-scheduler/actions/workflows/codeql.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/chandan0804//distributed-task-scheduler)](https://goreportcard.com/report/github.com/chandan0804//distributed-task-scheduler)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Fault-tolerant distributed task scheduler using Raft consensus, etcd, and gRPC.
